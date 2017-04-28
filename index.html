@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Demo</title>
+<style>
+    *{margin:0;}
+    html,body{
+        margin:0;
+        overflow:hidden;
+    }
+    #canvas{
+        position:absolute;
+        top:100px;
+        bottom:0;
+        left:100px;
+        right:0;
+    }
+
+    #gui{
+        position: absolute;top: 0;left: 0;
+    }
+    #deviceInfo{
+        height: 500px;
+        width: 500px;
+        position: absolute;
+        background-color: #f88;
+        top: 200px;
+        left: 200px;
+    }
+    #sideBar{
+        position: absolute;
+        right: 0;
+        top: 0;
+        background-color: #ccc;
+    }
+    #sideBar .deviceType{
+        background-color: #ffd;
+    }
+    #sideBar .addBuffer{
+        background-color: #fdf;
+    }
+    }
+    .added{
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        background-color: #dff;
+    }
+</style>
+</head>
+<body>
+    <div id="canvas"></div>
+    <section id="gui">
+        <button onclick="camera=camera===perspectiveCamera?(controller.enabled=false,orthographicCamera):(controller.enabled=true,perspectiveCamera)">changeCamera</button></br>
+        </br>
+        <button onclick="operations.move()">operations.move()</button></br>
+        <button onclick="operations.rotate()">operations.rotate()</button></br>
+        <button onclick="operations.deleteObj()">operations.deleteObj()</button></br>
+        <button onclick="operations.cancelMov()">operations.cancelMov()</button></br>
+        </br>
+        <button onclick="console.log(meshs.sampleObj)">meshs.sampleObj</button></br>
+        <button onclick="console.log(meshs.removedByMovingObj)">meshs.removedByMovingObj</button></br>
+        <button onclick="console.log(meshs.selectedObj)">meshs.selectedObj</button></br>
+        </br>
+        <button onclick="grid.parent?scene.remove(grid):scene.add(grid)">on/off grid</button></br>
+        </br>
+        <button onclick="spotLight.parent?scene.remove(spotLight):scene.add(spotLight)">on/off spotLight</button></br>
+        <button onclick="ambientLight.parent?scene.remove(ambientLight):scene.add(ambientLight)">on/off ambientLight</button></br>
+    </section>
+
+    <div id="vue-root">
+        <div id="deviceInfo"  v-if='isDeviceInfoShow'>
+            <div class="dismiss" @click='isDeviceInfoShow = false'>x</div>
+            <div>设备名称：<input v-model='curContainer.name' @click=''><button @click='saveName()'>保存</button></div>
+            <div>
+                设备列表：
+                <div>
+                    <div v-for = 'item in curContainer.childrenList.list' >
+                        设备类型：<span v-text='item.typeName'></span> <br />设备编号：<span v-text='item.code'></span> 
+                        <button @click='deleteDeviceFromContainer(item)'>删除</button>
+                        <button @click='moveDeviceFromContainer(item)'>移动</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="sideBar">
+            <div class="deviceType">
+                <div v-for = 'item in devices' v-text='item.typeName' @click='changeType(item.type)'></div>
+            </div>
+            <div class="deviceList">
+                <div v-for = 'item in (devices[curType]?devices[curType].list:[])' v-show = '!item.readyToAdd' @click='addToBuffer(item)'>
+                    设备类型：<span v-text='item.typeName'></span> <br />设备编号：<span v-text='item.code'></span>
+                </div>
+            </div>
+            <div class="addBuffer">
+                <div v-for = 'item in (devices[curType]?devices[curType].list:[])' v-show = 'item.readyToAdd' @click='item.readyToAdd = false;delete item.readyToAdd'>
+                    设备类型：<span v-text='item.typeName'></span> <br />设备编号：<span v-text='item.code'></span>
+                </div>
+                <button @click='addDevices()'>添加</button>
+
+                <hr></hr>
+                <button @click='scene_save()'>保存场景</button>
+                <button @click='scene_import()'>导入场景</button>
+                <button @click='scene_remove()'>删除缓存</button>
+
+            </div>
+        </div>
+        </div> -->
+        <div class="added">
+            <div v-for='item in addedList' @click='selectDevice(item)'>
+                设备类型：<span v-text='item.typeName'></span> <br />设备编号：<span v-text='item.code'></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="res/three.js"></script>
+    <script src="res/OBJLoader.js"></script>
+    <script src="res/OrbitControls.js"></script>
+    <script src="res/vue.js"></script>
+    <script src="res/tween.js"></script>
+    <script src="js/THREEx.FullScreen.js"></script>
+    <script src="js/THREEx.WindowResize.js"></script>
+    <script>
+        
+        var canvas = document.getElementById("canvas");
+        var SCREEN_WIDTH = canvas.clientWidth, SCREEN_HEIGHT = canvas.clientHeight;
+
+        //场景
+        var scene = new THREE.Scene();
+        
+        //相机
+        var perspectiveCamera = new THREE.PerspectiveCamera( 45, SCREEN_WIDTH / SCREEN_HEIGHT, 0.1, 1000);
+        perspectiveCamera.position.set(60,200,70);
+
+        // var orthographicCamera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / - 2, - 500, 1000 );
+        // orthographicCamera.position.set(60,100,60);
+        // orthographicCamera.rotation.set(-0.5 * Math.PI, 0, 0);
+        // orthographicCamera.zoom = 6;
+        // orthographicCamera.updateProjectionMatrix();
+
+        var camera = perspectiveCamera;
+        //var camera = orthographicCamera;
+
+        camera.moveTo= function(x,y,z,duration){                            //参数列表为目标镜头的坐标和动画时间
+            var dir = camera.getWorldDirection();
+            var dtx= x-controller.target.x;
+            var dty= y-controller.target.y;
+            var dtz= z-controller.target.z;
+
+            var cp_x = camera.position.x + dtx;     //新相机位置
+            var cp_z = camera.position.z + dtz;
+
+            var ct_x = controller.target.x + dtx;   //新相机焦点位置
+            var ct_y = controller.target.y + dty;
+            var ct_z = controller.target.z + dtz;   
+
+            var cp_tween = new TWEEN.Tween(camera.position)
+                        .to({x: cp_x, z: cp_z},500)
+                        .easing(TWEEN.Easing.Sinusoidal.InOut)
+                        .start();
+            var ct_tween = new TWEEN.Tween(controller.target)
+                        .to({x: ct_x, y: ct_y, z: ct_z},500)
+                        .easing(TWEEN.Easing.Sinusoidal.InOut)
+                        .start();
+        };
+        
+        //光照
+        var spotLight = new THREE.SpotLight(0xffffff,1);
+        spotLight.position.set(-40,60,-10);
+        spotLight.castShadow = true;
+        spotLight.shadow.mapSize.width = spotLight.shadow.mapSize.height = 2048;    //阴影大小
+        scene.add(spotLight);
+
+        //渲染器
+        var renderer = new THREE.WebGLRenderer({antialias:true});
+        renderer.setClearColor(0xeeeeee);
+        renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        renderer.shadowMap.enabled = true;              //渲染器渲染阴影
+        renderer.shadowMapSoft = true;                  //软阴影，即边缘虚化
+
+        renderer.gammaInput = true;
+        renderer.gammaOutput = true;
+        canvas.appendChild(renderer.domElement);
+        
+
+        //创建正方体（起点）
+        var CubeGeometry = new THREE.CubeGeometry(1,2,1);
+        var material = new THREE.MeshLambertMaterial({color:0xff0000});     
+        var cube = new THREE.Mesh(CubeGeometry,material);
+        cube.castShadow = true;
+        cube.position.set(1,0,0);
+        scene.add(cube);
+        
+        var ambientLight = new THREE.AmbientLight(0xffffff,0.5);                //添加环境光
+        scene.add(ambientLight);
+
+        //镜头控制器
+        var controller = new THREE.OrbitControls(perspectiveCamera, renderer.domElement);;
+  
+        //监听窗口大小变化
+        THREEx.WindowResize(renderer, camera, canvas);
+
+        //设置全屏键
+        THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+
+        //注册渲染时需实时更新的动画效果
+        function animate(){
+            TWEEN.update();             //开启补间动画
+            controller.update();        //实时更新镜头控制器
+        }
+
+        //循环渲染
+        function reRender(){
+            requestAnimationFrame(reRender);
+            renderer.render(scene, camera);
+            animate();
+        }
+        reRender();
+
+
+
+
+
+
+
+    </script>
+    <script src = 'js/sceneIO.js'></script>
+    <script src = 'js/init.js'></script>
+    <script src = 'js/main.js'></script>
+    <script src = 'js/controller.js'></script>
+    <script src = 'js/load.js'></script>
+    <script src = 'js/model/battery.js'></script>
+    <script src = 'js/model/cabinet.js'></script>
+    <script src = 'js/model/typeA.js'></script>
+    <script src = 'js/model/wall.js'></script>
+    <script src = 'js/model/airCon.js'></script>
+    <script src = 'js/model/BBDS.js'></script>
+    <script src = 'js/model/camera.js'></script>
+    <script src = 'js/model/distributor.js'></script>
+    <script src = 'js/model/smokeSensor.js'></script>
+    
+</body>
+</html>

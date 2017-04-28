@@ -1,0 +1,20 @@
+{
+  "name": "3dcenter",
+  "version": "1.0.0",
+  "description": "![状态机图](http://git.kongtrolink.com:3000/luoc/Scloud_3dDataCenter/raw/master/documentation/20170331102451.png)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://git.kongtrolink.com:3000/luoc/Scloud_3dDataCenter.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-livereload": "^3.8.1",
+    "gulp-webserver": "^0.9.1"
+  }
+}
